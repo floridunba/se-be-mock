@@ -1,8 +1,9 @@
 const express = require('express');
-const { createReview } = require('../controllers/reviews');
+const { createReview, updateReview, deleteReview } = require('../controllers/reviews');
 const { protect, authorize } = require('../middleware/auth');
 const router = express.Router({ mergeParams: true});
 
 router.route('/').post(protect, createReview);
+router.route('/:id').put(protect, authorize('admin', 'user'), updateReview).delete(protect, authorize('admin', 'user'), deleteReview);
 
 module.exports=router

@@ -49,3 +49,49 @@ exports.createReview = async (req, res, next) => {
         next(err);
     }
 };
+
+exports.updateReview = async (req, res, next) => {
+  try {
+    let review = await Review.findById(req.params.id);
+    if(req.user.role !== "admin" && review.user.toString() !== req.user.id){
+      return res.status(400).json({success: false});
+    }
+    review = await Review.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      reunValidators: true
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: review
+    })
+  } catch(err) {
+    console.log(err.stack);
+    return res.status(500).json({
+      success: false,
+      message: "Can not update review"
+    })
+  }
+}
+
+exports.deleteReview = async (req, res, next) => {
+try {
+    const review = await Review.findById(req.params.id);
+    if(req.user.role !== "admin" && review.user.toString() !== req.user.id){
+      return res.status(400).json({success: false});
+    }
+
+    await review.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      data: {}
+    })
+  } catch(err) {
+    console.log(err.stack);
+    return res.status(500).json({
+      success: false,
+      message: "Can not delete review"
+    })
+  }
+}
