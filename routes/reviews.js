@@ -1,6 +1,8 @@
 const express = require('express');
-const { getReviews } = require('../controllers/reviews');
-const { createReview, updateReview, deleteReview } = require('../controllers/reviews');
+const { getReviews, createReview, updateReview, deleteReview } = require('../controllers/reviews');
+
+const router = express.Router({ mergeParams: true} )
+const {protect, authorize}=require('../middleware/auth');
 
 router.route('/').get(getReviews).post(protect, createReview);
 router.route('/user').get(protect, authorize('admin', 'user'), getReviews);
