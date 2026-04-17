@@ -21,7 +21,8 @@ const CampgroundSchema = new mongoose.Schema({
     },
     postalcode:{
         type: String,
-        required: [true, 'Please add a postalcode'], maxlength:[5, 'Postal Code can not be more than 5 digits']
+        required: [true, 'Please add a postalcode'],
+        maxlength:[5, 'Postal Code can not be more than 5 digits']
     },
     tel:{
         type: String
@@ -30,6 +31,54 @@ const CampgroundSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please add a region']
     },
+
+    // Add FIELDS
+
+    description: {
+        type: String,
+        required: [true, 'Please add a description'],
+        maxlength: [1000, 'Description too long']
+    },
+
+    imgSrc: [
+        {
+            type: String // URL of image
+        }
+    ],
+
+    rooms: [
+        {
+            roomType: {
+                type: String,
+                required: true
+            },
+            description: {
+                type: String,
+                required: true
+            },
+            price: {
+                type: Number,
+                required: true
+            },
+            capacity: {
+                type: Number, // optional: how many people
+                default: 1
+            },
+            available: {
+                type: Number,
+                default: 0
+            }
+        }
+    ],
+    averageRating: {
+        type: Number,
+        default: 0
+    },
+    totalReviews: {
+        type: Number,
+        default: 0
+    }
+
 },{
     toJSON: {virtuals:true},
     toObject:{virtuals:true}
