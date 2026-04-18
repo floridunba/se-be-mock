@@ -9,19 +9,19 @@ exports.getReviews = async (req, res, next) => {
       query = Review.find({
         user: req.user.id,
         campground: req.params.campgroundId
-      }).populate("user", "_id name").populate("campground", "_id name").lean();
+      }).populate("user", "_id name role").populate("campground", "_id name").lean();
     }
     else {
       query = Review.find({
         campground: req.params.campgroundId
-      }).populate("user", "_id name").populate("campground", "_id name").lean();
+      }).populate("user", "_id name role").populate("campground", "_id name").lean();
     }
   }
   else {
     if(req.user.role !== 'admin'){
-        query = Review.find({user:req.user.id}).populate("user", "_id name").populate("campground", "_id name").lean();
+        query = Review.find({user:req.user.id}).populate("user", "_id name role").populate("campground", "_id name").lean();
     } else {
-      query = Review.find({}).populate("user", "_id name").populate("campground", "_id name").lean();
+      query = Review.find({}).populate("user", "_id name role").populate("campground", "_id name").lean();
     }
   }
   try {
