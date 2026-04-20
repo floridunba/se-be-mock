@@ -10,13 +10,14 @@ const CreditCardSchema = new mongoose.Schema({
   // NEVER store raw full card number in plain text
   cardNumber: {
     type: String,
-    required: true // ideally encrypted or tokenized
+    required: true
   },
 
   // Store last 4 digits for display
   last4: {
     type: String,
-    required: true
+    required: true,
+    length: 4,
   },
 
   cardHolderName: {
@@ -71,10 +72,27 @@ const CreditCardSchema = new mongoose.Schema({
   }
 });
 
-// update timestamp automatically
-creditCardSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
+function validateExpiry() {
+  const now = new Date();
+  const expiry = new Date(this.expiryYear, this.expiryMonth - 1, 1);
+  // Card is valid through the end of the expiry month
+  expiry.setMonth(expiry.getMonth() + 1);
+  return expiry > now;
+}
+// Unique index to prevent duplicate cards (same last4 + expiry per user)
+CreditCardSchema.index({ user: 1, last4: 1, expiryMonth: 1, expiryYear: 1 }, { unique: true });
+
+
+// If new card set to default -> unset isDefault on all other cards of the same user.
+CreditCardSchema.pre('save', async function (next) {
+  if (this.isDefault && this.isModified('isDefault')) {
+    await this.constructor.updateMany(
+      { user: this.user, _id: { $ne: this._id } },
+      { $set: { isDefault: false } }
+    );
+  }
   next();
 });
+
 
 export default mongoose.model("CreditCard", CreditCardSchema);
