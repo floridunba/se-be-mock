@@ -58,6 +58,25 @@ const CreditCardSchema = new mongoose.Schema({
   }
 });
 
+// Index for efficient multi-card lookup per user
+CreditCardSchema.index({ user: 1, createdAt: -1 });
+// Ensure at most one default card per user
+CreditCardSchema.index({ user: 1, isDefault: 1 });
+
+/**
+ * Before saving, if this card is set as default,
+ * unset isDefault on all other cards of the same user.
+ */
+CreditCardSchema.pre('save', async function (next) {
+  if (this.isDefault && this.isModified('isDefault')) {
+    await this.constructor.updateMany(
+      { user: this.user, _id: { $ne: this._id } },
+      { $set: { isDefault: false } }
+    );
+  }
+  next();
+});
+
 /**
  * Detect card brand from card number prefix.
  * @param {string} cardNumber
