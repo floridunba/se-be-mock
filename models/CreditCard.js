@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
+const mongoose=require('mongoose');
 
 const CreditCardSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
@@ -27,7 +27,9 @@ const CreditCardSchema = new mongoose.Schema({
 
   brand: {
     type: String, // Visa, MasterCard, Amex
-    required: true
+    required: true,
+    enum: ['visa', 'mastercard', 'amex', 'discover', 'other'],
+    default: 'other'
   },
 
   expiryMonth: {
@@ -37,14 +39,18 @@ const CreditCardSchema = new mongoose.Schema({
 
   expiryYear: {
     type: Number,
-    required: true
+    required: true,
+    validate: {
+      validator: validateExpiry,
+      message: 'Card expiry date is invalid or card is expired'
+    }
   },
 
   //In realworld: DO NOT STORE CVV in database (PCI-DSS violation)
 
   CVV: {
     type: String,
-    require: true
+    required: true
   },
 
   isDefault: {
@@ -91,8 +97,10 @@ CreditCardSchema.pre('save', async function (next) {
       { $set: { isDefault: false } }
     );
   }
-  next();
+  else {
+    next();
+  }
 });
 
 
-export default mongoose.model("CreditCard", CreditCardSchema);
+module.exports=mongoose.model('CreditCard', CreditCardSchema);
