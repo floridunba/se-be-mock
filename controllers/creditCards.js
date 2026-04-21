@@ -1,6 +1,26 @@
 import CreditCard from "../models/CreditCard.js";
 
-export const addCreditCard = async (req, res) => {
+/**
+ * @desc  Get all saved cards for the logged-in user
+ * @route GET /api/v1/cards
+ * @access Private
+ */
+export const getCreditCards = async (req, res, next) => {
+  try {
+    const cards = await CreditCard.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: cards.length,
+      data: cards
+    });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot retrieve cards' });
+  }
+};
+
+export const addCreditCard = async (req, res, next) => {
   try {
     req.body.user = req.user.id;
 
