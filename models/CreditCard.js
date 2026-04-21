@@ -10,6 +10,7 @@ const CreditCardSchema = new mongoose.Schema({
   // NEVER store raw full card number in plain text
   cardNumber: {
     type: String,
+    unique: true,
     required: true
   },
 
@@ -40,10 +41,7 @@ const CreditCardSchema = new mongoose.Schema({
   expiryYear: {
     type: Number,
     required: true,
-    validate: {
-      validator: validateExpiry,
-      message: 'Card expiry date is invalid or card is expired'
-    }
+    
   },
 
   //In realworld: DO NOT STORE CVV in database (PCI-DSS violation)
@@ -78,29 +76,27 @@ const CreditCardSchema = new mongoose.Schema({
   }
 });
 
-function validateExpiry() {
-  const now = new Date();
-  const expiry = new Date(this.expiryYear, this.expiryMonth - 1, 1);
-  // Card is valid through the end of the expiry month
-  expiry.setMonth(expiry.getMonth() + 1);
-  return expiry > now;
-}
-// Unique index to prevent duplicate cards (same last4 + expiry per user)
-CreditCardSchema.index({ user: 1, last4: 1, expiryMonth: 1, expiryYear: 1 }, { unique: true });
+CreditCardSchema.pre('save', async function () {
+    // Prevent duplicate card
+    const existing = await this.constructor.findOne({
+      user: this.user,
+      last4: this.last4,
+      expiryMonth: this.expiryMonth,
+      expiryYear: this.expiryYear,
+      _id: { $ne: this._id } // allow update of same doc
+    });
 
+    if (existing) {
+      throw new Error('Card already exists for this user');
+    }
 
-// If new card set to default -> unset isDefault on all other cards of the same user.
-CreditCardSchema.pre('save', async function (next) {
-  if (this.isDefault && this.isModified('isDefault')) {
-    await this.constructor.updateMany(
-      { user: this.user, _id: { $ne: this._id } },
-      { $set: { isDefault: false } }
-    );
-  }
-  else {
-    next();
-  }
+    // ⭐ Handle default logic
+    if (this.isDefault && this.isModified('isDefault')) {
+      await this.constructor.updateMany(
+        { user: this.user, _id: { $ne: this._id } },
+        { $set: { isDefault: false } }
+      );
+    }
 });
-
 
 module.exports=mongoose.model('CreditCard', CreditCardSchema);
