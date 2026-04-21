@@ -1,11 +1,12 @@
 const express = require('express');
 
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
-const { addCreditCard } = require('../controllers/creditCards');
+const { addCreditCard, deleteCreditCard } = require('../controllers/creditCards');
 
 router.route('/').put(protect, addCreditCard);
 
+router.route('/:id').delete(protect, authorize('admin', 'user'), deleteCreditCard)
 
 module.exports = router;
