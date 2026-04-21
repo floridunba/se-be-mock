@@ -19,11 +19,14 @@ const CreditCardSchema = new mongoose.Schema({
     type: String,
     required: true,
     length: 4,
+    match: [/^\d{4}$/, 'last4 must be exactly 4 digits']
   },
 
   cardHolderName: {
     type: String,
-    required: true
+    required: true,
+    trim: true,
+    maxlength: [100, 'Cardholder name cannot exceed 100 characters']
   },
 
   brand: {
@@ -35,13 +38,18 @@ const CreditCardSchema = new mongoose.Schema({
 
   expiryMonth: {
     type: Number,
-    required: true
+    required: true,
+    min: [1, 'Invalid expiry month'],
+    max: [12, 'Invalid expiry month']
   },
 
   expiryYear: {
     type: Number,
     required: true,
-    
+    validate: {
+      validator: validateExpiry,
+      message: 'Card expiry date is invalid or card is expired'
+    }
   },
 
   //In realworld: DO NOT STORE CVV in database (PCI-DSS violation)
@@ -75,6 +83,14 @@ const CreditCardSchema = new mongoose.Schema({
     default: 0
   }
 });
+
+function validateExpiry() {
+  const now = new Date();
+  const expiry = new Date(this.expiryYear, this.expiryMonth - 1, 1);
+  // Card is valid through the end of the expiry month
+  expiry.setMonth(expiry.getMonth() + 1);
+  return expiry > now;
+}
 
 CreditCardSchema.pre('save', async function () {
     // Prevent duplicate card
