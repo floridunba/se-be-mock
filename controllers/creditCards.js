@@ -1,4 +1,5 @@
 import CreditCard from "../models/CreditCard.js";
+import { validateCardUpdateFields } from "../utils/cardValidation.js";
 
 export const addCreditCard = async (req, res) => {
   try {
@@ -30,5 +31,55 @@ export const addCreditCard = async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+};
+
+/**
+ * @desc  Update a credit card
+ * @route PUT /api/v1/cards/:id
+ * @access Private
+ */
+export const updateCreditCard = async (req, res, next) => {
+  try {
+    let card = await CreditCard.findById(req.params.id);
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    // Ownership check
+    if (card.user.toString() !== req.user.id && req.uesr.role !== 'admin') {
+      return res.status(401).json({ success: false, message: 'Not authorized to update this card' });
+    }
+
+    const { cardholderName, cardNumber, expiryMonth, expiryYear, isDefault } = req.body;
+
+    // Validate update fields
+    const validationErrors = validateCardUpdateFields(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ success: false, message: validationErrors.join(', ') });
+    }
+
+    // If new card number provided, validate and re-encrypt
+    if (cardNumber !== undefined) {
+      const digits = cardNumber.replace(/\s+/g, '');
+
+      if (!/^\d{13,19}$/.test(digits)) {
+        return res.status(400).json({ success: false, message: 'Invalid card number format' });
+      }
+
+      req.body.last4 = digits.slice(-4);
+    }
+
+    card = await CreditCard.findByIdAndUpdate(req.params.id, req.body, {new:true, runValidators:false})
+
+    res.status(200).json({ success: true, data: card });
+  } catch (err) {
+    console.log(err.stack);
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join(', ') });
+    }
+    return res.status(500).json({ success: false, message: 'Cannot update card' });
   }
 };

@@ -10,7 +10,7 @@
  */
 function validateCardUpdateFields(body) {
   const errors = [];
-  const { cardHolderName, expiryMonth, expiryYear } = body;
+  const { cardHolderName, expiryMonth, expiryYear, balance } = body;
 
   if (cardHolderName !== undefined) {
     if (typeof cardHolderName !== 'string' || cardholderName.trim().length === 0) {
@@ -23,8 +23,12 @@ function validateCardUpdateFields(body) {
 
   if (expiryMonth !== undefined) {
     const month = Number(expiryMonth);
-    if (!Number.isInteger(month) || month < 1 || month > 12) {
-      errors.push('Expiry month must be between 1 and 12');
+    const now = new Date();
+    const expiry = new Date(Number(expiryYear), month - 1, 1);
+    // Card is valid through the end of the expiry month
+    expiry.setMonth(expiry.getMonth() + 1);
+    if (!Number.isInteger(month) || month < 1 || month > 12 || now > expiry) {
+      errors.push('Invalid Expiry month');
     }
   }
 
@@ -33,6 +37,12 @@ function validateCardUpdateFields(body) {
     const currentYear = new Date().getFullYear();
     if (!Number.isInteger(year) || year < currentYear) {
       errors.push(`Expiry year must be ${currentYear} or later`);
+    }
+  }
+
+  if (balance !== undefined) {
+    if (balance < 0) {
+        errors.push(`Credit card's balance must be positive`);
     }
   }
 
