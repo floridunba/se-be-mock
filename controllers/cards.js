@@ -28,8 +28,48 @@ exports.getCreditCards = async (req, res, next) => {
  * Body: { cardholderName, cardNumber, expiryMonth, expiryYear, isDefault? }
  */
 exports.addCreditCard = async (req, res, next) => {
-  // Stub — full implementation in US1-1-add-card-api
-  res.status(501).json({ success: false, message: 'Not implemented yet' });
+  try {
+    const { cardholderName, cardNumber, expiryMonth, expiryYear, isDefault } = req.body;
+
+    if (!cardNumber) {
+      return res.status(400).json({ success: false, message: 'Card number is required' });
+    }
+
+    const digits = cardNumber.replace(/\s+/g, '');
+
+    // Validate card length (13-19 digits)
+    if (!/^\d{13,19}$/.test(digits)) {
+      return res.status(400).json({ success: false, message: 'Invalid card number format' });
+    }
+
+    const last4 = digits.slice(-4);
+    const brand = CreditCard.detectBrand(digits);
+    const encryptedNumber = encrypt(digits);
+
+    const card = await CreditCard.create({
+      user: req.user.id,
+      cardholderName,
+      last4,
+      encryptedNumber,
+      brand,
+      expiryMonth,
+      expiryYear,
+      isDefault: isDefault || false
+    });
+
+    // Remove encryptedNumber from response (extra safety)
+    const response = card.toObject();
+    delete response.encryptedNumber;
+
+    res.status(201).json({ success: true, data: response });
+  } catch (err) {
+    console.log(err.stack);
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join(', ') });
+    }
+    return res.status(500).json({ success: false, message: 'Cannot add card' });
+  }
 };
 
 /**
