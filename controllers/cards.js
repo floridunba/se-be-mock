@@ -42,6 +42,19 @@ exports.addCreditCard = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid card number format' });
     }
 
+    // Luhn algorithm check
+    if (!luhnCheck(digits)) {
+      return res.status(400).json({ success: false, message: 'Invalid card number' });
+    }
+
+    // Validate expiry
+    const now = new Date();
+    const expiry = new Date(Number(expiryYear), Number(expiryMonth) - 1, 1);
+    expiry.setMonth(expiry.getMonth() + 1);
+    if (expiry <= now) {
+      return res.status(400).json({ success: false, message: 'Card is expired' });
+    }
+
     const last4 = digits.slice(-4);
     const brand = CreditCard.detectBrand(digits);
     const encryptedNumber = encrypt(digits);
