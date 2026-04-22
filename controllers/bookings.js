@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Campground = require('../models/Campground');
+const CreditCard = require('../models/CreditCard');
 
 
 //@desc Get all bookings
@@ -118,6 +119,57 @@ exports.updateBooking=async (req,res,next)=>{
     } catch(err) {
         console.log(err.stack);
         return res.status(500).json({success:false, message:"Cannot update Booking"});
+    }
+};
+
+//@desc Pay booking with a saved card
+//@route POST /api/v1/bookings/:id/pay
+//@access Private
+exports.payBooking = async (req, res, next) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: `No booking with id ${req.params.id}` });
+        }
+
+        // Only the booking owner can pay
+        if (booking.user.toString() !== req.user.id) {
+            return res.status(401).json({ success: false, message: 'Not authorized to pay this booking' });
+        }
+
+        const { cardId } = req.body;
+        if (!cardId) {
+            return res.status(400).json({ success: false, message: 'cardId is required' });
+        }
+
+        // Find card and verify ownership
+        const card = await CreditCard.findById(cardId);
+        if (!card) {
+            return res.status(404).json({ success: false, message: `No card with id ${cardId}` });
+        }
+        if (card.user.toString() !== req.user.id) {
+            return res.status(401).json({ success: false, message: 'Not authorized to use this card' });
+        }
+
+        // Check booking is still pending and not expired
+        if (booking.paymentStatus === 'paid') {
+            return res.status(400).json({ success: false, message: 'Booking is already paid' });
+        }
+        if (booking.paymentStatus === 'cancelled') {
+            return res.status(400).json({ success: false, message: 'Booking is cancelled' });
+        }
+        if (booking.paymentStatus === 'expired' || (booking.paymentExpiresAt && booking.paymentExpiresAt < new Date())) {
+            return res.status(400).json({ success: false, message: 'Payment session has expired' });
+        }
+
+        booking.paymentStatus = 'paid';
+        booking.paymentCard = cardId;
+        await booking.save({ validateBeforeSave: false });
+
+        res.status(200).json({ success: true, data: booking });
+    } catch (err) {
+        console.log(err.stack);
+        return res.status(500).json({ success: false, message: 'Cannot process payment' });
     }
 };
 
