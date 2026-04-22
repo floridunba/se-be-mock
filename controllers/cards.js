@@ -96,6 +96,59 @@ exports.updateCreditCard = async (req, res, next) => {
 };
 
 /**
+ * @desc  Get single card by id
+ * @route GET /api/v1/cards/:id
+ * @access Private
+ */
+exports.getCreditCard = async (req, res, next) => {
+  try {
+    const card = await CreditCard.findById(req.params.id);
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    if (card.user.toString() !== req.user.id) {
+      return res.status(401).json({ success: false, message: 'Not authorized to view this card' });
+    }
+
+    res.status(200).json({ success: true, data: card });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot retrieve card' });
+  }
+};
+
+/**
+ * @desc  Set a card as default
+ * @route PUT /api/v1/cards/:id/default
+ * @access Private
+ */
+exports.setDefaultCard = async (req, res, next) => {
+  try {
+    const card = await CreditCard.findById(req.params.id);
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    if (card.user.toString() !== req.user.id) {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Unset all other defaults then set this one
+    await CreditCard.updateMany({ user: req.user.id }, { $set: { isDefault: false } });
+    card.isDefault = true;
+    await card.save({ validateBeforeSave: false });
+
+    res.status(200).json({ success: true, data: card });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot set default card' });
+  }
+};
+
+/**
  * @desc  Delete a credit card
  * @route DELETE /api/v1/cards/:id
  * @access Private

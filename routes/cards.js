@@ -1,9 +1,11 @@
 const express = require('express');
 const {
   getCreditCards,
+  getCreditCard,
   addCreditCard,
   updateCreditCard,
-  deleteCreditCard
+  deleteCreditCard,
+  setDefaultCard
 } = require('../controllers/cards');
 
 const router = express.Router();
@@ -14,7 +16,11 @@ router.route('/')
   .post(protect, addCreditCard);
 
 router.route('/:id')
+  .get(protect, getCreditCard)
   .put(protect, updateCreditCard)
   .delete(protect, deleteCreditCard);
+
+router.route('/:id/default')
+  .put(protect, setDefaultCard);
 
 module.exports = router;
