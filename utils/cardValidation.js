@@ -10,7 +10,7 @@
  */
 function validateCardUpdateFields(body) {
   const errors = [];
-  const { cardHolderName, expiryMonth, expiryYear, balance } = body;
+  const { cardHolderName, expiryMonth, expiryYear, balance, isDefault } = body;
 
   if (cardHolderName !== undefined) {
     if (typeof cardHolderName !== 'string' || cardholderName.trim().length === 0) {
@@ -44,6 +44,10 @@ function validateCardUpdateFields(body) {
     if (balance < 0) {
         errors.push(`Credit card's balance must be positive`);
     }
+  }
+
+  if (isDefault !== undefined) {
+    errors.push("Cannot edit isDefault in this request");
   }
 
   return errors;

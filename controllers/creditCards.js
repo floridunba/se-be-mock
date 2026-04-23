@@ -1,4 +1,5 @@
 import CreditCard from "../models/CreditCard.js";
+import { validateCardUpdateFields } from "../utils/cardValidation.js";
 
 /**
  * @desc  Get all saved cards for the logged-in user
@@ -7,7 +8,7 @@ import CreditCard from "../models/CreditCard.js";
  */
 export const getCreditCards = async (req, res, next) => {
   try {
-    const cards = await CreditCard.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
+    const cards = await CreditCard.find({ user: req.user.id });
 
     res.status(200).json({
       success: true,
@@ -119,7 +120,7 @@ export const updateCreditCard = async (req, res, next) => {
     }
 
     // Ownership check
-    if (card.user.toString() !== req.user.id && req.uesr.role !== 'admin') {
+    if (card.user.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(401).json({ success: false, message: 'Not authorized to update this card' });
     }
 
