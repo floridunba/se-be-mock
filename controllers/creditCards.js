@@ -76,3 +76,30 @@ export const addCreditCard = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * @desc  Delete a credit card
+ * @route DELETE /api/v1/cards/:id
+ * @access Private
+ */
+export const deleteCreditCard = async (req, res, next) => {
+  try {
+    const card = await CreditCard.findById(req.params.id);
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    // Ownership check — only owner can delete
+    if (card.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ success: false, message: 'Not authorized to delete this card' });
+    }
+
+    await card.deleteOne();
+
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot delete card' });
+  }
+};
