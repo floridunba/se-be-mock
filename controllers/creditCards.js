@@ -1,7 +1,50 @@
 import CreditCard from "../models/CreditCard.js";
-import { validateCardUpdateFields } from "../utils/cardValidation.js";
 
-export const addCreditCard = async (req, res) => {
+/**
+ * @desc  Get all saved cards for the logged-in user
+ * @route GET /api/v1/cards
+ * @access Private
+ */
+export const getCreditCards = async (req, res, next) => {
+  try {
+    const cards = await CreditCard.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: cards.length,
+      data: cards
+    });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot retrieve cards' });
+  }
+};
+
+/**
+ * @desc  Get single card by id
+ * @route GET /api/v1/cards/:id
+ * @access Private
+ */
+export const getCreditCard = async (req, res, next) => {
+  try {
+    const card = await CreditCard.findById(req.params.id);
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    if (card.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ success: false, message: 'Not authorized to view this card' });
+    }
+
+    res.status(200).json({ success: true, data: card });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot retrieve card' });
+  }
+};
+
+export const addCreditCard = async (req, res, next) => {
   try {
     req.body.user = req.user.id;
 
@@ -33,6 +76,34 @@ export const addCreditCard = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc  Delete a credit card
+ * @route DELETE /api/v1/cards/:id
+ * @access Private
+ */
+export const deleteCreditCard = async (req, res, next) => {
+  try {
+    const card = await CreditCard.findById(req.params.id);
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    // Ownership check — only owner can delete
+    if (card.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ success: false, message: 'Not authorized to delete this card' });
+    }
+
+    await card.deleteOne();
+
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    console.log(err.stack);
+    return res.status(500).json({ success: false, message: 'Cannot delete card' });
+  }
+};
+
 
 /**
  * @desc  Update a credit card
