@@ -74,6 +74,8 @@ const CreditCardSchema = new mongoose.Schema({
 CreditCardSchema.index({ user: 1, createdAt: -1 });
 // Ensure at most one default card per user
 CreditCardSchema.index({ user: 1, isDefault: 1 });
+// Unique index to prevent duplicate cards (same last4 + expiry per user)
+CreditCardSchema.index({ user: 1, last4: 1, expiryMonth: 1, expiryYear: 1 }, { unique: true });
 
 /**
  * Before saving, if this card is set as default,
