@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
+const mongoose=require('mongoose');
 
 const CreditCardSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
@@ -10,6 +10,7 @@ const CreditCardSchema = new mongoose.Schema({
   // NEVER store raw full card number in plain text
   cardNumber: {
     type: String,
+    unique: true,
     required: true
   },
 
@@ -18,33 +19,44 @@ const CreditCardSchema = new mongoose.Schema({
     type: String,
     required: true,
     length: 4,
+    match: [/^\d{4}$/, 'last4 must be exactly 4 digits']
   },
 
   cardHolderName: {
     type: String,
-    required: true
+    required: true,
+    trim: true,
+    maxlength: [100, 'Cardholder name cannot exceed 100 characters']
   },
 
   brand: {
     type: String, // Visa, MasterCard, Amex
-    required: true
+    required: true,
+    enum: ['visa', 'mastercard', 'amex', 'discover', 'other'],
+    default: 'other'
   },
 
   expiryMonth: {
     type: Number,
-    required: true
+    required: true,
+    min: [1, 'Invalid expiry month'],
+    max: [12, 'Invalid expiry month']
   },
 
   expiryYear: {
     type: Number,
-    required: true
+    required: true,
+    validate: {
+      validator: validateExpiry,
+      message: 'Card expiry date is invalid or card is expired'
+    }
   },
 
   //In realworld: DO NOT STORE CVV in database (PCI-DSS violation)
 
   CVV: {
     type: String,
-    require: true
+    required: true
   },
 
   isDefault: {
@@ -79,20 +91,28 @@ function validateExpiry() {
   expiry.setMonth(expiry.getMonth() + 1);
   return expiry > now;
 }
-// Unique index to prevent duplicate cards (same last4 + expiry per user)
-CreditCardSchema.index({ user: 1, last4: 1, expiryMonth: 1, expiryYear: 1 }, { unique: true });
 
+CreditCardSchema.pre('save', async function () {
+    // Prevent duplicate card
+    const existing = await this.constructor.findOne({
+      user: this.user,
+      last4: this.last4,
+      expiryMonth: this.expiryMonth,
+      expiryYear: this.expiryYear,
+      _id: { $ne: this._id } // allow update of same doc
+    });
 
-// If new card set to default -> unset isDefault on all other cards of the same user.
-CreditCardSchema.pre('save', async function (next) {
-  if (this.isDefault && this.isModified('isDefault')) {
-    await this.constructor.updateMany(
-      { user: this.user, _id: { $ne: this._id } },
-      { $set: { isDefault: false } }
-    );
-  }
-  next();
+    if (existing) {
+      throw new Error('Card already exists for this user');
+    }
+
+    // ⭐ Handle default logic
+    if (this.isDefault && this.isModified('isDefault')) {
+      await this.constructor.updateMany(
+        { user: this.user, _id: { $ne: this._id } },
+        { $set: { isDefault: false } }
+      );
+    }
 });
 
-
-export default mongoose.model("CreditCard", CreditCardSchema);
+module.exports=mongoose.model('CreditCard', CreditCardSchema);
