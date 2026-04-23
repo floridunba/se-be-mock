@@ -1,13 +1,15 @@
 const mongoose=require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
-    checkIn: {
+    bookDate: {
         type: Date,
         required: true
     },
-    checkOut: {
-        type: Date,
-        required: true
+    duration: {
+        type: Number,
+        required: true,
+        min: [1, "Booking must be at least 1 night"],
+        max: [3, "Booking cannot exceed 3 nights"]
     },
     user: {
         type: mongoose.Schema.ObjectId,

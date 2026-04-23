@@ -78,11 +78,11 @@ exports.addBooking=async (req,res,next)=>{
             return res.status(400).json({success:false, message:"Booking duration must be between 1-3 nights"});
         }
 
-        const existedBookings=await Booking.find({user:req.user.id});
+        // const existedBookings=await Booking.find({user:req.user.id});
 
-        if(existedBookings.length >= 3 && req.user.role !== 'admin'){
-            return res.status(400).json({success:false,message:`The user with ID ${req.user.id} has already made 3 bookings`});
-        }
+        // if(existedBookings.length >= 3 && req.user.role !== 'admin'){
+        //     return res.status(400).json({success:false,message:`The user with ID ${req.user.id} has already made 3 bookings`});
+        // }
 
         const booking = await Booking.create(req.body);
         res.status(200).json({success:true, data: booking});
