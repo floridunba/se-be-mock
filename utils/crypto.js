@@ -71,4 +71,15 @@ function decrypt(ciphertext) {
   return decrypted.toString();
 }
 
-module.exports = { encrypt, decrypt, luhnCheck };
+/**
+ * Re-encrypt a card number: decrypt old ciphertext, strip, re-encrypt with fresh IV.
+ * Used when updating a card number to ensure new random IV is used.
+ * @param {string} newCardNumber  digits only
+ * @returns {string}  new ciphertext
+ */
+function reEncryptCardNumber(newCardNumber) {
+  const digits = newCardNumber.replace(/\s+/g, '');
+  return encrypt(digits);
+}
+
+module.exports = { encrypt, decrypt, luhnCheck, reEncryptCardNumber };
