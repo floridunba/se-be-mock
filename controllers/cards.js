@@ -103,8 +103,82 @@ exports.addCreditCard = async (req, res, next) => {
  * @access Private
  */
 exports.updateCreditCard = async (req, res, next) => {
-  // Stub — implemented in US1-4
-  res.status(501).json({ success: false, message: 'Not implemented yet' });
+  try {
+    let card = await CreditCard.findById(req.params.id).select('+encryptedNumber');
+
+    if (!card) {
+      return res.status(404).json({ success: false, message: `No card with id ${req.params.id}` });
+    }
+
+    // Ownership check
+    if (card.user.toString() !== req.user.id) {
+      return res.status(401).json({ success: false, message: 'Not authorized to update this card' });
+    }
+
+    const { cardholderName, cardNumber, expiryMonth, expiryYear, isDefault } = req.body;
+
+    // If new card number provided, validate and re-encrypt
+    if (cardNumber !== undefined) {
+      const digits = cardNumber.replace(/\s+/g, '');
+
+      if (!/^\d{13,19}$/.test(digits)) {
+        return res.status(400).json({ success: false, message: 'Invalid card number format' });
+      }
+
+      if (!luhnCheck(digits)) {
+        return res.status(400).json({ success: false, message: 'Invalid card number' });
+      }
+
+      const newLast4 = digits.slice(-4);
+      const newExpiryMonth = expiryMonth !== undefined ? Number(expiryMonth) : card.expiryMonth;
+      const newExpiryYear = expiryYear !== undefined ? Number(expiryYear) : card.expiryYear;
+
+      // Check for duplicate (same last4 + expiry for same user, different card)
+      const duplicate = await CreditCard.findOne({
+        user: req.user.id,
+        last4: newLast4,
+        expiryMonth: newExpiryMonth,
+        expiryYear: newExpiryYear,
+        _id: { $ne: card._id }
+      });
+      if (duplicate) {
+        return res.status(409).json({ success: false, message: 'A card with these details already exists' });
+      }
+
+      card.last4 = newLast4;
+      card.brand = CreditCard.detectBrand(digits);
+      card.encryptedNumber = encrypt(digits);
+    }
+
+    // Validate expiry if changed
+    const updatedExpiryMonth = expiryMonth !== undefined ? Number(expiryMonth) : card.expiryMonth;
+    const updatedExpiryYear = expiryYear !== undefined ? Number(expiryYear) : card.expiryYear;
+    const now = new Date();
+    const expiry = new Date(updatedExpiryYear, updatedExpiryMonth - 1, 1);
+    expiry.setMonth(expiry.getMonth() + 1);
+    if (expiry <= now) {
+      return res.status(400).json({ success: false, message: 'Card is expired or expiry date is invalid' });
+    }
+
+    if (cardholderName !== undefined) card.cardholderName = cardholderName;
+    if (expiryMonth !== undefined) card.expiryMonth = updatedExpiryMonth;
+    if (expiryYear !== undefined) card.expiryYear = updatedExpiryYear;
+    if (isDefault !== undefined) card.isDefault = isDefault;
+
+    await card.save({ validateBeforeSave: false });
+
+    const response = card.toObject();
+    delete response.encryptedNumber;
+
+    res.status(200).json({ success: true, data: response });
+  } catch (err) {
+    console.log(err.stack);
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join(', ') });
+    }
+    return res.status(500).json({ success: false, message: 'Cannot update card' });
+  }
 };
 
 /**
