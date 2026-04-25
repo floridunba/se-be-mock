@@ -46,6 +46,9 @@ const BookingSchema = new mongoose.Schema({
     }
 });
 
+// Index for efficient lookup of pending bookings per user
+BookingSchema.index({ user: 1, paymentStatus: 1, paymentExpiresAt: 1 });
+
 // Pre-save hook: auto-set paymentExpiresAt = createdAt + 12 hours when new
 BookingSchema.pre('save', function(next) {
     if (this.isNew && !this.paymentExpiresAt) {
