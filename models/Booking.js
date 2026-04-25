@@ -24,7 +24,35 @@ const BookingSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'cancelled', 'expired'],
+        default: 'pending'
+    },
+    paymentExpiresAt: {
+        type: Date
+    },
+    paymentCard: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'CreditCard'
+    },
+    cancelledBy: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
+    },
+    cancelledAt: {
+        type: Date
     }
+});
+
+// Pre-save hook: auto-set paymentExpiresAt = createdAt + 12 hours when new
+BookingSchema.pre('save', function(next) {
+    if (this.isNew && !this.paymentExpiresAt) {
+        const base = this.createdAt || new Date();
+        this.paymentExpiresAt = new Date(base.getTime() + 12 * 60 * 60 * 1000);
+    }
+    next();
 });
 
 module.exports=mongoose.model('Booking',BookingSchema);
