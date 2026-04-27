@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Campground = require('../models/Campground');
+const CreditCard = require('../models/CreditCard');
 
 
 //@desc Get all bookings

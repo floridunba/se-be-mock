@@ -4,8 +4,24 @@
   "description": "[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/kKKZe60Y)",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --coverage --runInBand",
     "dev": "nodemon server.js"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "config/**/*.js",
+      "controllers/**/*.js",
+      "middleware/**/*.js",
+      "models/**/*.js",
+      "routes/**/*.js",
+      "utils/**/*.js",
+      "server.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "json-summary"
+    ],
+    "testEnvironment": "node"
   },
   "repository": {
     "type": "git",
@@ -32,6 +48,8 @@
     "mongoose": "^9.2.1"
   },
   "devDependencies": {
+    "jest": "^30.3.0",
+    "node-mocks-http": "^1.17.2",
     "nodemon": "^3.1.11"
   }
 }
