@@ -237,6 +237,39 @@ exports.payBooking = async (req, res, next) => {
     }
 };
 
+//@desc Cancel payment for a booking (admin only)
+//@route PUT /api/v1/bookings/:id/cancel-payment
+//@access Private (admin)
+exports.cancelPayment = async (req, res, next) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: `No booking with id ${req.params.id}` });
+        }
+
+        // Prevent cancel of completed (paid) payments
+        if (booking.paymentStatus === 'paid') {
+            return res.status(400).json({ success: false, message: 'Cannot cancel a completed payment' });
+        }
+
+        // Validate payment state before cancel
+        if (booking.paymentStatus === 'cancelled') {
+            return res.status(400).json({ success: false, message: 'Booking payment is already cancelled' });
+        }
+
+        booking.paymentStatus = 'cancelled';
+        booking.cancelledBy = req.user.id;
+        booking.cancelledAt = new Date();
+        await booking.save({ validateBeforeSave: false });
+
+        res.status(200).json({ success: true, data: booking });
+    } catch (err) {
+        console.log(err.stack);
+        return res.status(500).json({ success: false, message: 'Cannot cancel payment' });
+    }
+};
+
 //@desc Delete booking
 //@route DELETE /api/v1/bookings/:id
 //@access Private
