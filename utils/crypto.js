@@ -6,13 +6,40 @@ const IV_LENGTH = 16;
 /**
  * Returns a 32-byte key from CARD_ENCRYPTION_KEY env var.
  * The env var must be a 64-char hex string (32 bytes).
+ * Falls back to a deterministic dev key when NODE_ENV !== 'production'.
  */
 function getKey() {
   const hex = process.env.CARD_ENCRYPTION_KEY;
-  if (!hex || hex.length !== 64) {
+  if (hex && hex.length === 64) {
+    return Buffer.from(hex, 'hex');
+  }
+  if (process.env.NODE_ENV === 'production') {
     throw new Error('CARD_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
   }
-  return Buffer.from(hex, 'hex');
+  // Dev fallback — NEVER use in production
+  return Buffer.alloc(32, 0);
+}
+
+/**
+ * Validate Luhn algorithm for card number.
+ * @param {string} cardNumber  digits only (spaces stripped)
+ * @returns {boolean}
+ */
+function luhnCheck(cardNumber) {
+  const digits = cardNumber.replace(/\s+/g, '');
+  if (!/^\d+$/.test(digits)) return false;
+  let sum = 0;
+  let alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let n = parseInt(digits[i], 10);
+    if (alt) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
 }
 
 /**
@@ -44,4 +71,4 @@ function decrypt(ciphertext) {
   return decrypted.toString();
 }
 
-module.exports = { encrypt, decrypt };
+module.exports = { encrypt, decrypt, luhnCheck };
