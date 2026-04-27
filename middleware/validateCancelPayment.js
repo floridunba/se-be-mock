@@ -15,6 +15,14 @@ const validateCancelPayment = async (req, res, next) => {
       });
     }
 
+    // Explicit guard: completed (paid) payments can never be cancelled
+    if (booking.paymentStatus === 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel a completed payment. Contact support if needed.'
+      });
+    }
+
     const CANCELLABLE_STATUSES = ['pending', 'expired'];
 
     if (!CANCELLABLE_STATUSES.includes(booking.paymentStatus)) {
