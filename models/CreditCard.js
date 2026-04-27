@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 
+// Validate card expiry: card must not be expired
+function validateExpiry() {
+  const now = new Date();
+  const expiry = new Date(this.expiryYear, this.expiryMonth - 1, 1);
+  // Card is valid through the end of the expiry month
+  expiry.setMonth(expiry.getMonth() + 1);
+  return expiry > now;
+}
+
 /**
  * CreditCard schema — stores card info with card number encrypted at rest.
  * NEVER expose encryptedNumber via API; only last4 is returned.
@@ -46,7 +55,10 @@ const CreditCardSchema = new mongoose.Schema({
   expiryYear: {
     type: Number,
     required: [true, 'Please add expiry year'],
-    min: [new Date().getFullYear(), 'Card is expired']
+    validate: {
+      validator: validateExpiry,
+      message: 'Card expiry date is invalid or card is expired'
+    }
   },
   isDefault: {
     type: Boolean,
