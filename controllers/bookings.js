@@ -121,6 +121,47 @@ exports.updateBooking=async (req,res,next)=>{
     }
 };
 
+//@desc Resume payment session for a booking
+//@route PUT /api/v1/bookings/:id/resume
+//@access Private
+exports.resumePayment = async (req, res, next) => {
+    try {
+        const booking = await Booking.findById(req.params.id)
+            .populate({ path: 'campground', select: 'name address tel' })
+            .populate({ path: 'paymentCard', select: 'last4 brand expiryMonth expiryYear cardholderName' });
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: `No booking with id ${req.params.id}` });
+        }
+
+        // Only the booking owner can resume
+        if (booking.user.toString() !== req.user.id) {
+            return res.status(401).json({ success: false, message: 'Not authorized to resume this booking' });
+        }
+
+        if (booking.paymentStatus !== 'pending') {
+            return res.status(400).json({ success: false, message: `Cannot resume booking with status: ${booking.paymentStatus}` });
+        }
+
+        if (booking.paymentExpiresAt && booking.paymentExpiresAt < new Date()) {
+            booking.paymentStatus = 'expired';
+            await booking.save({ validateBeforeSave: false });
+            return res.status(400).json({ success: false, message: 'Payment session has expired' });
+        }
+
+        const timeRemainingMs = booking.paymentExpiresAt - new Date();
+        res.status(200).json({
+            success: true,
+            data: booking,
+            paymentDeadline: booking.paymentExpiresAt,
+            timeRemainingMs
+        });
+    } catch (err) {
+        console.log(err.stack);
+        return res.status(500).json({ success: false, message: 'Cannot resume payment session' });
+    }
+};
+
 //@desc Get the user's ongoing (pending, not expired) booking
 //@route GET /api/v1/bookings/pending
 //@access Private
