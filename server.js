@@ -53,7 +53,21 @@ app.use(cors());
 app.use('/api/v1/campgrounds', campgrounds);
 app.use('/api/v1/auth',auth);
 app.use('/api/v1/bookings', bookings);
+app.use('/api/v1/cards', cards);
 app.use('/api/v1/reviews', reviews)
+
+// Background job: expire bookings every hour
+const Booking = require('./models/Booking');
+setInterval(async () => {
+  try {
+    await Booking.updateMany(
+      { paymentStatus: 'pending', paymentExpiresAt: { $lte: new Date() } },
+      { $set: { paymentStatus: 'expired' } }
+    );
+  } catch (err) {
+    console.error('Background job error (expire bookings):', err.message);
+  }
+}, 60 * 60 * 1000);
 
 const PORT=process.env.PORT || 5000;
 const server = app.listen (PORT,console.log('Server running in ', process.env.NODE_ENV, ' mode on port ', PORT));
