@@ -43,10 +43,9 @@ exports.getBookings=async (req,res,next)=>{
 //@access Public
 exports.getBooking=async (req,res,next)=>{
     try{
-        const booking = await Booking.findById(req.params.id).populate({
-            path: 'campground',
-            select:'name description tel'
-        });
+        const booking = await Booking.findById(req.params.id)
+            .populate({ path: 'campground', select:'name description tel' })
+            .populate({ path: 'paymentCard', select: 'last4 brand expiryMonth expiryYear cardholderName' });
 
         if(!booking){
             return res.status(404).json({success:false, message:`No booking with the id of ${req.params.id}`});
