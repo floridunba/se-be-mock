@@ -121,6 +121,30 @@ exports.updateBooking=async (req,res,next)=>{
     }
 };
 
+//@desc Get the user's ongoing (pending, not expired) booking
+//@route GET /api/v1/bookings/pending
+//@access Private
+exports.getOngoingBooking = async (req, res, next) => {
+    try {
+        const booking = await Booking.findOne({
+            user: req.user.id,
+            paymentStatus: 'pending',
+            paymentExpiresAt: { $gt: new Date() }
+        })
+        .populate({ path: 'campground', select: 'name address tel' })
+        .populate({ path: 'paymentCard', select: 'last4 brand expiryMonth expiryYear cardholderName' });
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'No pending booking found' });
+        }
+
+        res.status(200).json({ success: true, data: booking });
+    } catch (err) {
+        console.log(err.stack);
+        return res.status(500).json({ success: false, message: 'Cannot retrieve ongoing booking' });
+    }
+};
+
 //@desc Pay booking with a saved card
 //@route POST /api/v1/bookings/:id/pay
 //@access Private
