@@ -57,6 +57,18 @@ exports.addCreditCard = async (req, res, next) => {
 
     const last4 = digits.slice(-4);
     const brand = CreditCard.detectBrand(digits);
+
+    // Check for duplicate card (same last4 + expiryMonth + expiryYear for same user)
+    const duplicate = await CreditCard.findOne({
+      user: req.user.id,
+      last4,
+      expiryMonth: Number(expiryMonth),
+      expiryYear: Number(expiryYear)
+    });
+    if (duplicate) {
+      return res.status(409).json({ success: false, message: 'This card has already been added to your account' });
+    }
+
     const encryptedNumber = encrypt(digits);
 
     const card = await CreditCard.create({
