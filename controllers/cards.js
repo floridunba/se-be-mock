@@ -1,5 +1,6 @@
 const CreditCard = require('../models/CreditCard');
 const { encrypt, luhnCheck } = require('../utils/crypto');
+const { validateCardUpdateFields } = require('../utils/cardValidation');
 
 /**
  * @desc  Get all saved cards for the logged-in user
@@ -116,6 +117,12 @@ exports.updateCreditCard = async (req, res, next) => {
     }
 
     const { cardholderName, cardNumber, expiryMonth, expiryYear, isDefault } = req.body;
+
+    // Validate update fields
+    const validationErrors = validateCardUpdateFields(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ success: false, message: validationErrors.join(', ') });
+    }
 
     // If new card number provided, validate and re-encrypt
     if (cardNumber !== undefined) {
