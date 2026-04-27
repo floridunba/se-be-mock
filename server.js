@@ -15,6 +15,7 @@ connectDB();
 const campgrounds = require('./routes/campgrounds');
 const auth = require('./routes/auth');
 const bookings =require('./routes/bookings');
+const cards = require('./routes/cards');
 const mongoSanitize = require('express-mongo-sanitize');
 const reviews = require('./routes/reviews')
 const helmet = require('helmet');
