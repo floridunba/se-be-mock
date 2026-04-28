@@ -13,7 +13,7 @@ function validateCardUpdateFields(body) {
   const { cardHolderName, expiryMonth, expiryYear, balance, isDefault } = body;
 
   if (cardHolderName !== undefined) {
-    if (typeof cardHolderName !== 'string' || cardholderName.trim().length === 0) {
+    if (typeof cardHolderName !== 'string' || cardHolderName.trim().length === 0) {
       errors.push('Cardholder name cannot be empty');
     }
     if (cardHolderName.length > 100) {
