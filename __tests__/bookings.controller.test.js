@@ -300,6 +300,7 @@ describe('bookings controller', () => {
       user: { toString: () => 'u1' },
       paymentStatus: 'pending',
       paymentExpiresAt: new Date(Date.now() + 1000),
+      duration: 1,
       room: { price: 200 }
     });
     CreditCard.findById.mockResolvedValueOnce({ user: { toString: () => 'u1' }, balance: 100 });
@@ -312,6 +313,7 @@ describe('bookings controller', () => {
       user: { toString: () => 'u1' },
       paymentStatus: 'pending',
       paymentExpiresAt: new Date(Date.now() + 1000),
+      duration: 1,
       room: { price: 200 },
       save: jest.fn().mockResolvedValue(undefined)
     };
@@ -324,7 +326,8 @@ describe('bookings controller', () => {
     CreditCard.findById.mockResolvedValueOnce(card);
     await controller.payBooking(req, res);
     expect(booking.paymentStatus).toBe('paid');
-    expect(card.balance).toBe(50);
+    expect(booking.status).toBe('confirmed');
+    expect(card.balance).toBe(16);
     expect(res.status).toHaveBeenCalledWith(200);
 
     req = { params: { id: '11' }, user: { id: 'u1' }, body: { cardId: 'c1' } };
