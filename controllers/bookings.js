@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Campground = require('../models/Campground');
+const CreditCard = require('../models/CreditCard');
 
 
 //@desc Get all bookings
@@ -257,6 +258,7 @@ exports.payBooking = async (req, res, next) => {
         }
         
         booking.paymentStatus = 'paid';
+        booking.status = 'confirmed';
         booking.paymentCard = cardId;
         await booking.save({ validateBeforeSave: false });
         card.balance = cardBalance - roomPrice;
