@@ -113,6 +113,12 @@ exports.updateBooking=async (req,res,next)=>{
             return res.status(400).json({success:false, message:"Booking duration must be between 1-3 nights"});
         }
 
+        // If admin is cancelling, stamp who cancelled
+        if(req.user.role === 'admin' && req.body.status === 'cancelled'){
+            req.body.cancelledBy = req.user.id;
+            req.body.cancelledAt = new Date();
+        }
+
         booking = await Booking.findByIdAndUpdate(req.params.id, req.body,{new:true, runValidators:true});
 
         res.status(200).json({success:true, data:booking});
@@ -251,16 +257,21 @@ exports.payBooking = async (req, res, next) => {
         if (booking.paymentStatus === 'expired' || (booking.paymentExpiresAt && booking.paymentExpiresAt < new Date())) {
             return res.status(400).json({ success: false, message: 'Payment session has expired' });
         }
-        let roomPrice = booking.room.price;
-        let cardBalance = card.balance;
-        if(card.balance < booking.room.price) {
-            return res.status(400).json({ success: false, message: 'Payment session has expired' });
+        // Calculate total charge matching frontend: subtotal + 10% service fee + 7% tax
+        const subtotal = booking.room.price * booking.duration;
+        const serviceFee = Math.round(subtotal * 0.10);
+        const tax = Math.round(subtotal * 0.07);
+        const totalCharge = subtotal + serviceFee + tax;
+
+        if (card.balance < totalCharge) {
+            return res.status(400).json({ success: false, message: 'Insufficient balance' });
         }
-        
+
         booking.paymentStatus = 'paid';
+        booking.status = 'confirmed';
         booking.paymentCard = cardId;
         await booking.save({ validateBeforeSave: false });
-        card.balance = cardBalance - roomPrice;
+        card.balance = card.balance - totalCharge;
         await card.save({ validateBeforeSave: false })
         res.status(200).json({ success: true, data: booking });
     } catch (err) {
@@ -291,6 +302,7 @@ exports.cancelPayment = async (req, res, next) => {
         }
 
         booking.paymentStatus = 'cancelled';
+        booking.status = 'cancelled';
         booking.cancelledBy = req.user.id;
         booking.cancelledAt = new Date();
         await booking.save({ validateBeforeSave: false });
